@@ -8,6 +8,7 @@
   <title>我的品宣工作台 · Personal Creative Desk</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./theme-v12.css">
+  <link rel="stylesheet" href="./theme-v13.css">
 </head>
 <body>
   <div class="app-shell">
@@ -18,15 +19,15 @@
         <div class="nav-group"><div class="nav-label">工作空间</div>
           <button type="button" class="nav-item active" data-view="home"><span class="nav-icon">⌂</span>今日工作</button>
           <button type="button" class="nav-item" data-view="tasks"><span class="nav-icon">▦</span>我的任务</button>
-          <button type="button" class="nav-item" data-view="calendar"><span class="nav-icon">▤</span>项目排期</button></div>
+          <button type="button" class="nav-item" data-view="projects"><span class="nav-icon">▤</span>项目中心</button></div>
         <div class="nav-group"><div class="nav-label">内容资产</div>
-          <button type="button" class="nav-item" data-view="portfolio"><span class="nav-icon">✦</span>作品成果</button>
+          <button type="button" class="nav-item" data-view="portfolio"><span class="nav-icon">✦</span>我的作品库</button>
           <button type="button" class="nav-item" data-view="video"><span class="nav-icon">▷</span>视频记录</button>
           <button type="button" class="nav-item" data-view="topics"><span class="nav-icon">☷</span>内容选题</button></div>
         <div class="nav-group"><div class="nav-label">复盘成长</div>
           <button type="button" class="nav-item" data-view="time"><span class="nav-icon">◷</span>工时统计</button>
           <button type="button" class="nav-item" data-view="report"><span class="nav-icon">▣</span>周总结</button>
-          <button type="button" class="nav-item" data-view="evidence"><span class="nav-icon">★</span>绩效证据</button></div>
+          <button type="button" class="nav-item" data-view="evidence"><span class="nav-icon">★</span>成果档案</button></div>
         <div class="nav-group"><div class="nav-label">系统</div>
           <button type="button" class="nav-item" data-view="data"><span class="nav-icon">⚙</span>数据备份</button></div>
       </nav>
@@ -34,7 +35,7 @@
     </aside>
     <div class="workspace">
       <header class="topbar">
-        <div><span class="eyebrow">PERSONAL CREATIVE DESK · V1.2</span><div class="topbar-title" id="topTitle">今日工作</div></div>
+        <div><span class="eyebrow">PERSONAL CREATIVE DESK · V1.3</span><div class="topbar-title" id="topTitle">今日工作</div></div>
         <div class="top-actions"><span id="todayLabel" class="today-label"></span><button type="button" id="newTaskGlobal" class="btn primary"><span class="plus">＋</span> 新建任务</button></div>
       </header>
       <main id="view" class="main-content" tabindex="-1"></main>
@@ -49,6 +50,7 @@
         <label class="field full">任务名称 <input name="title" required maxlength="120" placeholder="例如：制作招生短视频主视觉"></label>
         <label class="field">所属项目 <select name="projectId" id="taskProject"></select></label>
         <label class="field">工作类型 <select name="type" id="taskType"></select></label>
+        <label class="field">任务来源 <select name="source"><option>自主规划</option><option>领导安排</option><option>临时需求</option><option>客户需求</option></select></label>
         <label class="field">优先级 <select name="priority"><option>普通</option><option>重要</option><option>紧急</option></select></label>
         <label class="field">任务状态 <select name="status"><option>待开始</option><option>进行中</option><option>已完成</option></select></label>
         <label class="field">开始日期 <input type="date" name="startDate"></label>
@@ -67,10 +69,35 @@
 
   <dialog id="projectDialog" class="modal narrow">
     <form id="projectForm" class="modal-form">
-      <div class="modal-head"><div><span class="eyebrow">PROJECT</span><h2>新增项目</h2></div><button type="button" class="icon-button" data-close="projectDialog" aria-label="关闭">×</button></div>
+      <div class="modal-head"><div><span class="eyebrow">PROJECT</span><h2 id="projectModalTitle">新增项目</h2></div><button type="button" class="icon-button" data-close="projectDialog" aria-label="关闭">×</button></div>
+      <input type="hidden" name="id">
       <label class="field">项目名称 <input name="name" required maxlength="80" placeholder="输入项目名称"></label>
+      <label class="field">负责人 <input name="owner" maxlength="80" placeholder="例如：自己"></label>
+      <label class="field">项目状态 <select name="status"><option>规划中</option><option>进行中</option><option>已完成</option><option>已暂停</option></select></label>
+      <div class="form-grid"><label class="field">开始日期 <input type="date" name="startDate"></label><label class="field">结束日期 <input type="date" name="endDate"></label></div>
+      <label class="field">项目说明 <textarea name="description" rows="3" placeholder="项目目标、背景和主要交付"></textarea></label>
       <label class="field">标识颜色 <input type="color" name="color" value="#d87550"></label>
       <div class="modal-actions"><button type="button" class="btn ghost" data-close="projectDialog">取消</button><button type="submit" class="btn primary">保存项目</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="workDialog" class="modal">
+    <form id="workForm" class="modal-form">
+      <div class="modal-head"><div><span class="eyebrow">PORTFOLIO WORK</span><h2 id="workModalTitle">新增作品</h2></div><button type="button" class="icon-button" data-close="workDialog" aria-label="关闭">×</button></div>
+      <input type="hidden" name="id"><input type="hidden" name="imageData">
+      <div class="form-grid">
+        <label class="field full">作品名称 <input name="title" required maxlength="120" placeholder="例如：第三期双师双证招生海报"></label>
+        <label class="field">所属项目 <select name="projectId" id="workProject"></select></label>
+        <label class="field">关联任务 <select name="taskId" id="workTask"></select></label>
+        <label class="field">作品类型 <select name="type" id="workType"></select></label>
+        <label class="field">完成日期 <input type="date" name="date" required></label>
+        <label class="field full">成果描述 <textarea name="description" required rows="3" placeholder="这件作品解决了什么问题，应用在哪里？"></textarea></label>
+        <label class="field full">标签 <input name="tags" maxlength="160" placeholder="海报设计、养老培训、招生推广（用逗号分隔）"></label>
+        <label class="field full">成果链接 <input type="url" name="link" placeholder="https://…"></label>
+        <label class="field full">封面图片 <input type="file" name="imageFile" accept="image/png,image/jpeg,image/webp"><small>上传后会压缩并保存在此浏览器，也包含在 JSON 备份中。</small><span class="image-state" id="workImageState"></span></label>
+        <label class="field full">补充备注 <textarea name="notes" rows="2"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="workDialog">取消</button><button type="submit" class="btn primary">保存作品</button></div>
     </form>
   </dialog>
 
@@ -87,16 +114,19 @@
 
   <dialog id="evidenceDialog" class="modal narrow">
     <form id="evidenceForm" class="modal-form">
-      <div class="modal-head"><div><span class="eyebrow">PERFORMANCE ARCHIVE</span><h2 id="evidenceModalTitle">新增绩效证据</h2></div><button type="button" class="icon-button" data-close="evidenceDialog" aria-label="关闭">×</button></div>
+      <div class="modal-head"><div><span class="eyebrow">ACHIEVEMENT ARCHIVE</span><h2 id="evidenceModalTitle">新增成果档案</h2></div><button type="button" class="icon-button" data-close="evidenceDialog" aria-label="关闭">×</button></div>
       <input type="hidden" name="id">
+      <input type="hidden" name="imageData">
       <label class="field">关联任务 <select name="taskId" id="evidenceTask"><option value="">不关联任务</option></select></label>
       <label class="field">所属项目 <select name="projectId" id="evidenceProject"></select></label>
       <label class="field">完成日期 <input type="date" name="date" required></label>
-      <label class="field">证据标题 <input name="title" required maxlength="100" placeholder="例如：招生视频最终版交付"></label>
-      <label class="field">输出成果 <textarea name="output" rows="3" required placeholder="说明交付了什么，以及产生的价值"></textarea></label>
+      <label class="field">成果标题 <input name="title" required maxlength="100" placeholder="例如：第三期培训线上招生支持"></label>
+      <label class="field">完成内容 <textarea name="output" rows="3" required placeholder="例如：招生海报、公众号长图、视频剪辑"></textarea></label>
+      <label class="field">产生价值 <textarea name="value" rows="3" placeholder="例如：支持项目线上推广，提高招生信息触达效率"></textarea></label>
       <label class="field">图片 / 成果链接 <input type="url" name="link" placeholder="https://…"></label>
+      <label class="field">附件图片 <input type="file" name="imageFile" accept="image/png,image/jpeg,image/webp"><small>本地压缩保存，并随 JSON 备份导出。</small><span class="image-state" id="evidenceImageState"></span></label>
       <label class="field">备注 <textarea name="notes" rows="2" placeholder="数据、反馈、修改情况等"></textarea></label>
-      <div class="modal-actions"><button type="button" class="btn ghost" data-close="evidenceDialog">取消</button><button type="submit" class="btn primary">保存证据</button></div>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="evidenceDialog">取消</button><button type="submit" class="btn primary">保存档案</button></div>
     </form>
   </dialog>
 

@@ -1,8 +1,13 @@
 export const STORAGE_KEY = 'pinxuan-workbench-v1';
 export const STATUSES = ['待开始', '进行中', '已完成'];
 export const PRIORITIES = ['紧急', '重要', '普通'];
-export const WORK_TYPES = ['平面设计', '视频剪辑', '文案策划', '公众号运营', '活动执行', '沟通协调', '其他'];
+export const WORK_TYPES = ['设计', '视频', '内容', '拍摄', '沟通', '物料'];
+export const TASK_SOURCES = ['自主规划', '领导安排', '临时需求', '客户需求'];
 export const TIME_KINDS = ['常规', '临时插单', '返工'];
+export function taskType(type) {
+  const legacy = { 平面设计: '设计', 视频剪辑: '视频', 文案策划: '内容', 公众号运营: '内容', 活动执行: '物料', 沟通协调: '沟通' };
+  return WORK_TYPES.includes(type) ? type : (legacy[type] || '其他');
+}
 export function parseEstimatedHours(value) {
   if (value === '' || value === null || value === undefined) return null;
   const hours = Number(value);
@@ -52,14 +57,16 @@ export function createInitialState() {
   return {
     schemaVersion: 1,
     projects: names.map((name, index) => ({ id: newId(), name, color: colors[index] })),
-    tasks: [], timeEntries: [], evidence: [], reportNotes: {}, timer: null
+    tasks: [], timeEntries: [], evidence: [], works: [], reportNotes: {}, timer: null
   };
 }
 export function normalizeState(raw) {
   if (!raw || raw.schemaVersion !== 1 || !Array.isArray(raw.projects) || !Array.isArray(raw.tasks) || !Array.isArray(raw.timeEntries) || !Array.isArray(raw.evidence)) {
     throw new Error('备份文件格式不正确或版本不受支持。');
   }
-  const records = [raw.projects, raw.tasks, raw.timeEntries, raw.evidence];
+  const works = raw.works === undefined ? [] : raw.works;
+  if (!Array.isArray(works)) throw new Error('备份文件中的作品记录格式不正确。');
+  const records = [raw.projects, raw.tasks, raw.timeEntries, raw.evidence, works];
   if (records.some(items => items.some(item => !item || typeof item !== 'object' || Array.isArray(item) || typeof item.id !== 'string'))) {
     throw new Error('备份文件包含无效记录。');
   }
@@ -69,6 +76,7 @@ export function normalizeState(raw) {
     tasks: raw.tasks,
     timeEntries: raw.timeEntries,
     evidence: raw.evidence,
+    works,
     reportNotes: raw.reportNotes && typeof raw.reportNotes === 'object' && !Array.isArray(raw.reportNotes) ? raw.reportNotes : {},
     timer: raw.timer && typeof raw.timer.taskId === 'string' && Number.isFinite(Date.parse(raw.timer.startedAt)) ? raw.timer : null
   };
@@ -86,7 +94,8 @@ export function createTask(fields, now = new Date()) {
   if (!title) throw new Error('请填写任务名称。');
   const iso = now.toISOString();
   return {
-    id: newId(), title, projectId: String(fields.projectId ?? ''), type: String(fields.type ?? '其他'),
+    id: newId(), title, projectId: String(fields.projectId ?? ''), type: WORK_TYPES.includes(taskType(fields.type)) ? taskType(fields.type) : '设计',
+    source: TASK_SOURCES.includes(fields.source) ? fields.source : '自主规划',
     priority: PRIORITIES.includes(fields.priority) ? fields.priority : '普通',
     status: STATUSES.includes(fields.status) ? fields.status : '待开始',
     startDate: fields.startDate || '', dueDate: fields.dueDate || '',
@@ -169,10 +178,35 @@ export function timeByWorkType(state, fromDate, toDateExclusive, now = new Date(
   for (const entry of entries) {
     const duration = entryDurationInRange(entry, from, to);
     if (!duration) continue;
-    const type = state.tasks.find(task => task.id === entry.taskId)?.type || '其他';
+    const rawType = state.tasks.find(task => task.id === entry.taskId)?.type;
+    const type = rawType ? taskType(rawType) : '其他';
     byType[type] = (byType[type] || 0) + duration;
   }
   return byType;
+}
+export function projectSummary(state, projectId) {
+  const tasks = state.tasks.filter(t => t.projectId === projectId);
+  const works = (state.works || []).filter(w => w.projectId === projectId);
+  const evidenceCount = state.evidence.filter(e => (e.projectId || state.tasks.find(t => t.id === e.taskId)?.projectId) === projectId).length;
+  const completed = tasks.filter(t => t.status === '已完成').length;
+  const inProgress = tasks.filter(t => t.status === '进行中').length;
+  const pending = tasks.length - completed - inProgress;
+  const outputs = Object.fromEntries([...WORK_TYPES, '其他'].map(type => [type, 0]));
+  const linked = new Set(works.map(w => w.taskId).filter(Boolean));
+  for (const work of works) outputs[taskType(work.type)]++;
+  for (const task of tasks) if (task.status === '已完成' && !linked.has(task.id)) outputs[taskType(task.type)]++;
+  return { total: tasks.length, completed, inProgress, pending, progress: tasks.length ? Math.round(completed / tasks.length * 100) : 0, outputs, works, evidenceCount };
+}
+export function monthlyCareerStats(state, month) {
+  const completed = state.tasks.filter(t => t.status === '已完成' && t.deliveredAt?.slice(0, 7) === month);
+  const works = (state.works || []).filter(w => w.date?.slice(0, 7) === month);
+  const linked = new Set(works.map(w => w.taskId).filter(Boolean));
+  const counts = Object.fromEntries([...WORK_TYPES, '其他'].map(type => [type, 0]));
+  for (const work of works) counts[taskType(work.type)]++;
+  for (const task of completed) if (!linked.has(task.id)) counts[taskType(task.type)]++;
+  const projectIds = new Set([...completed.map(t => t.projectId), ...works.map(w => w.projectId)].filter(Boolean));
+  const created = state.tasks.filter(t => (t.createdAt || t.startDate || '').slice(0, 7) === month);
+  return { counts, projects: projectIds.size, temporary: created.filter(t => t.source === '临时需求').length, tasks: created.length };
 }
 export function weeklyReport(state, startDate, now = new Date()) {
   const start = weekStart(startDate);
@@ -181,7 +215,8 @@ export function weeklyReport(state, startDate, now = new Date()) {
   const touchedTaskIds = new Set(completed.map(t => t.id));
   for (const e of state.timeEntries) if (entryDurationInRange(e, parseLocalDate(start), parseLocalDate(end))) touchedTaskIds.add(e.taskId);
   const evidence = state.evidence.filter(e => e.date >= start && e.date < end);
-  return { start, end: addDays(end, -1), completed, touchedCount: touchedTaskIds.size, evidence, time: timeSummary(state, start, end, now), note: state.reportNotes[start] || '' };
+  const works = (state.works || []).filter(w => w.date >= start && w.date < end);
+  return { start, end: addDays(end, -1), completed, touchedCount: touchedTaskIds.size, evidence, works, time: timeSummary(state, start, end, now), note: state.reportNotes[start] || '' };
 }
 export function reportText(state, startDate, now = new Date()) {
   const r = weeklyReport(state, startDate, now);
@@ -192,7 +227,7 @@ export function reportText(state, startDate, now = new Date()) {
     '', '一、本周完成事项',
     ...(r.completed.length ? r.completed.map((t, i) => `${i + 1}. [${projectName(t.projectId)}] ${t.title}`) : ['暂无已完成任务']),
     '', '二、重要成果',
-    ...(r.evidence.length ? r.evidence.map((e, i) => `${i + 1}. ${e.title || e.output}｜${projectName(e.projectId || state.tasks.find(t => t.id === e.taskId)?.projectId)}${e.link ? `｜${e.link}` : ''}`) : ['暂无绩效证据']),
+    ...(r.evidence.length || r.works.length ? [...r.evidence.map(e => `${e.title || e.output}｜${projectName(e.projectId || state.tasks.find(t => t.id === e.taskId)?.projectId)}${e.value ? `｜价值：${e.value}` : ''}${e.link ? `｜${e.link}` : ''}`), ...r.works.map(w => `${w.title}｜${projectName(w.projectId)}${w.description ? `｜${w.description}` : ''}${w.link ? `｜${w.link}` : ''}`)].map((entry, i) => `${i + 1}. ${entry}`) : ['暂无成果档案或作品']),
     '', '三、工时统计',
     ...Object.entries(r.time.byProject).sort((a, b) => b[1] - a[1]).map(([id, ms]) => `- ${projectName(id)}：${formatDuration(ms)}`),
     `- 临时插单：${formatDuration(r.time.byKind['临时插单'])}`,

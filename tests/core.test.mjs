@@ -4,7 +4,8 @@ import {
   STORAGE_KEY, createInitialState, createTask, setTaskStatus,
   loadState, saveState, normalizeState, localDate, weekStart,
   startTimer, stopTimer, createManualEntry, taskDuration,
-  timeSummary, timeByWorkType, weeklyReport, reportText, parseEstimatedHours
+  timeSummary, timeByWorkType, weeklyReport, reportText, parseEstimatedHours,
+  taskType, projectSummary, monthlyCareerStats
 } from '../dist/core.mjs';
 
 const memoryStorage = () => {
@@ -100,6 +101,31 @@ test('V1.1 工时分布按真实任务类型汇总', () => {
     createManualEntry({ taskId: video.id, date: '2026-10-11', minutes: 45 })
   ] };
   const mix = timeByWorkType(state, '2026-10-11', '2026-10-12');
-  assert.equal(mix['平面设计'], 90 * 60000);
-  assert.equal(mix['视频剪辑'], 45 * 60000);
+  assert.equal(mix['设计'], 90 * 60000);
+  assert.equal(mix['视频'], 45 * 60000);
+});
+
+test('V1.3 旧备份、旧类型和新作品记录可兼容恢复', () => {
+  const base=createInitialState();
+  const legacy={...base}; delete legacy.works;
+  assert.deepEqual(normalizeState(legacy).works, []);
+  assert.equal(taskType('公众号运营'), '内容');
+  const work={id:'work-1',title:'招生海报',projectId:base.projects[0].id,taskId:'',type:'设计',date:'2026-10-11',description:'用于招生推广',tags:'海报设计',imageData:'',link:'',notes:''};
+  const storage=memoryStorage();
+  saveState({...base,works:[work]},storage);
+  assert.deepEqual(loadState(storage).works[0],work);
+});
+
+test('V1.3 项目进度、成果结构与月度临时需求统计来自真实记录', () => {
+  const base=createInitialState(); const id=base.projects[0].id;
+  const done=setTaskStatus(createTask({title:'海报',projectId:id,type:'设计',source:'临时需求'},new Date(2026,9,11)), '已完成',new Date(2026,9,11));
+  const active=createTask({title:'视频',projectId:id,type:'视频',status:'进行中',source:'领导安排'},new Date(2026,9,11));
+  const work={id:'work-1',title:'海报作品',projectId:id,taskId:done.id,type:'设计',date:'2026-10-11',description:'支持招生'};
+  const state={...base,tasks:[done,active],works:[work]};
+  const p=projectSummary(state,id);
+  assert.equal(p.progress,50); assert.equal(p.completed,1); assert.equal(p.inProgress,1); assert.equal(p.outputs['设计'],1);
+  const m=monthlyCareerStats(state,'2026-10');
+  assert.equal(m.counts['设计'],1); assert.equal(m.projects,1); assert.equal(m.temporary,1); assert.equal(m.tasks,2);
+  assert.equal(weeklyReport(state,'2026-10-11').works.length,1);
+  assert.match(reportText(state,'2026-10-11'),/海报作品/);
 });
