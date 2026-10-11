@@ -3,6 +3,12 @@ export const STATUSES = ['待开始', '进行中', '已完成'];
 export const PRIORITIES = ['紧急', '重要', '普通'];
 export const WORK_TYPES = ['平面设计', '视频剪辑', '文案策划', '公众号运营', '活动执行', '沟通协调', '其他'];
 export const TIME_KINDS = ['常规', '临时插单', '返工'];
+export function parseEstimatedHours(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours < 0 || hours > 999) throw new Error('预计工时需在 0 至 999 小时之间。');
+  return hours;
+}
 
 export const newId = () => globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export const pad = n => String(n).padStart(2, '0');
@@ -84,6 +90,7 @@ export function createTask(fields, now = new Date()) {
     priority: PRIORITIES.includes(fields.priority) ? fields.priority : '普通',
     status: STATUSES.includes(fields.status) ? fields.status : '待开始',
     startDate: fields.startDate || '', dueDate: fields.dueDate || '',
+    estimatedHours: parseEstimatedHours(fields.estimatedHours),
     assignedBy: String(fields.assignedBy ?? '').trim(),
     deliveredAt: fields.deliveredAt || (fields.status === '已完成' ? localDateTime(now) : ''),
     notes: String(fields.notes ?? '').trim(), deliverableUrl: String(fields.deliverableUrl ?? '').trim(),
@@ -153,6 +160,19 @@ export function timeSummary(state, fromDate, toDateExclusive, now = new Date()) 
     }
   }
   return { totalMs, byProject, byDay, byKind };
+}
+export function timeByWorkType(state, fromDate, toDateExclusive, now = new Date()) {
+  const from = parseLocalDate(fromDate), to = parseLocalDate(toDateExclusive);
+  const byType = {};
+  const entries = [...state.timeEntries];
+  if (state.timer) entries.push({ taskId: state.timer.taskId, startedAt: state.timer.startedAt, endedAt: now.toISOString() });
+  for (const entry of entries) {
+    const duration = entryDurationInRange(entry, from, to);
+    if (!duration) continue;
+    const type = state.tasks.find(task => task.id === entry.taskId)?.type || '其他';
+    byType[type] = (byType[type] || 0) + duration;
+  }
+  return byType;
 }
 export function weeklyReport(state, startDate, now = new Date()) {
   const start = weekStart(startDate);

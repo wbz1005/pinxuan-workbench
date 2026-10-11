@@ -3,30 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f5ef">
-  <meta name="description" content="我的品宣工作台：任务、排期、工时、周报与绩效证据。数据保存在当前浏览器。">
-  <title>我的品宣工作台 V1.0</title>
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="description" content="我的品宣工作台：记录创意、管理项目、沉淀成果。数据保存在当前浏览器。">
+  <title>我的品宣工作台 · Personal Creative Desk</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" aria-label="主导航">
       <div class="brand"><span class="brand-mark">品</span><span><strong>我的品宣工作台</strong><small>PERSONAL CREATIVE DESK</small></span></div>
-      <div class="nav-label">工作空间</div>
+      <div class="brand-tagline">记录创意 · 管理项目 · 沉淀成果</div>
       <nav class="side-nav" id="nav">
-        <button type="button" class="nav-item active" data-view="home"><span class="nav-icon">◫</span>工作首页</button>
-        <button type="button" class="nav-item" data-view="tasks"><span class="nav-icon">▦</span>任务看板</button>
-        <button type="button" class="nav-item" data-view="calendar"><span class="nav-icon">▤</span>日历排期</button>
-        <button type="button" class="nav-item" data-view="time"><span class="nav-icon">◷</span>工时统计</button>
-        <button type="button" class="nav-item" data-view="report"><span class="nav-icon">▣</span>每周总结</button>
-        <button type="button" class="nav-item" data-view="evidence"><span class="nav-icon">✦</span>绩效证据</button>
-        <button type="button" class="nav-item" data-view="data"><span class="nav-icon">⇄</span>备份恢复</button>
+        <div class="nav-group"><div class="nav-label">工作空间</div>
+          <button type="button" class="nav-item active" data-view="home"><span class="nav-icon">⌂</span>今日工作</button>
+          <button type="button" class="nav-item" data-view="tasks"><span class="nav-icon">▦</span>我的任务</button>
+          <button type="button" class="nav-item" data-view="calendar"><span class="nav-icon">▤</span>项目排期</button></div>
+        <div class="nav-group"><div class="nav-label">内容资产</div>
+          <button type="button" class="nav-item" data-view="portfolio"><span class="nav-icon">✦</span>作品成果</button>
+          <button type="button" class="nav-item" data-view="video"><span class="nav-icon">▷</span>视频记录</button>
+          <button type="button" class="nav-item" data-view="topics"><span class="nav-icon">☷</span>内容选题</button></div>
+        <div class="nav-group"><div class="nav-label">复盘成长</div>
+          <button type="button" class="nav-item" data-view="time"><span class="nav-icon">◷</span>工时统计</button>
+          <button type="button" class="nav-item" data-view="report"><span class="nav-icon">▣</span>周总结</button>
+          <button type="button" class="nav-item" data-view="evidence"><span class="nav-icon">★</span>绩效证据</button></div>
+        <div class="nav-group"><div class="nav-label">系统</div>
+          <button type="button" class="nav-item" data-view="data"><span class="nav-icon">⚙</span>数据备份</button></div>
       </nav>
       <div class="side-bottom"><span class="status-dot"></span>数据保存在此浏览器<small>建议定期下载 JSON 备份</small></div>
     </aside>
     <div class="workspace">
       <header class="topbar">
-        <div><span class="eyebrow">个人工作管理系统 · V1.0</span><div class="topbar-title" id="topTitle">工作首页</div></div>
+        <div><span class="eyebrow">PERSONAL CREATIVE DESK · V1.1</span><div class="topbar-title" id="topTitle">今日工作</div></div>
         <div class="top-actions"><span id="todayLabel" class="today-label"></span><button type="button" id="newTaskGlobal" class="btn primary"><span class="plus">＋</span> 新建任务</button></div>
       </header>
       <main id="view" class="main-content" tabindex="-1"></main>
@@ -45,6 +52,7 @@
         <label class="field">任务状态 <select name="status"><option>待开始</option><option>进行中</option><option>已完成</option></select></label>
         <label class="field">开始日期 <input type="date" name="startDate"></label>
         <label class="field">截止日期 <input type="date" name="dueDate"></label>
+        <label class="field">预计工时（小时） <input type="number" name="estimatedHours" min="0" max="999" step="0.5" placeholder="选填，例如 3"></label>
         <label class="field">任务安排人 <input name="assignedBy" maxlength="80" placeholder="选填"></label>
         <label class="field">实际交付时间 <input type="datetime-local" name="deliveredAt"></label>
         <label class="field full">成果链接 <input type="url" name="deliverableUrl" placeholder="https://…"></label>

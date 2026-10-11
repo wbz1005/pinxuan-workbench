@@ -4,7 +4,7 @@ import {
   STORAGE_KEY, createInitialState, createTask, setTaskStatus,
   loadState, saveState, normalizeState, localDate, weekStart,
   startTimer, stopTimer, createManualEntry, taskDuration,
-  timeSummary, weeklyReport, reportText
+  timeSummary, timeByWorkType, weeklyReport, reportText, parseEstimatedHours
 } from '../dist/core.mjs';
 
 const memoryStorage = () => {
@@ -75,4 +75,31 @@ test('JSON 备份可恢复，非法格式被拒绝', () => {
   assert.equal(normalizeState(JSON.parse(backup)).projects.length, 5);
   assert.throws(() => normalizeState({ schemaVersion: 2 }), /格式不正确/);
   assert.match(localDate(new Date(2026, 9, 11)), /^2026-10-11$/);
+});
+
+test('V1.1 预计工时保留在原有数据结构中，旧任务仍可读取', () => {
+  const base = createInitialState();
+  const task = createTask({ title: '招生海报', estimatedHours: '3.5' });
+  assert.equal(task.estimatedHours, 3.5);
+  assert.equal(parseEstimatedHours(''), null);
+  assert.throws(() => parseEstimatedHours('-1'), /预计工时/);
+  const oldTask = { ...task };
+  delete oldTask.estimatedHours;
+  const storage = memoryStorage();
+  saveState({ ...base, tasks: [oldTask, task] }, storage);
+  assert.equal(loadState(storage).tasks.length, 2);
+  assert.equal(loadState(storage).tasks[1].estimatedHours, 3.5);
+});
+
+test('V1.1 工时分布按真实任务类型汇总', () => {
+  const base = createInitialState();
+  const design = createTask({ title: '海报', type: '平面设计' });
+  const video = createTask({ title: '剪辑', type: '视频剪辑' });
+  const state = { ...base, tasks: [design, video], timeEntries: [
+    createManualEntry({ taskId: design.id, date: '2026-10-11', minutes: 90 }),
+    createManualEntry({ taskId: video.id, date: '2026-10-11', minutes: 45 })
+  ] };
+  const mix = timeByWorkType(state, '2026-10-11', '2026-10-12');
+  assert.equal(mix['平面设计'], 90 * 60000);
+  assert.equal(mix['视频剪辑'], 45 * 60000);
 });
