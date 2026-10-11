@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f5ef">
+  <meta name="description" content="我的品宣工作台：任务、排期、工时、周报与绩效证据。数据保存在当前浏览器。">
+  <title>我的品宣工作台 V1.0</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand"><span class="brand-mark">品</span><span><strong>我的品宣工作台</strong><small>PERSONAL CREATIVE DESK</small></span></div>
+      <div class="nav-label">工作空间</div>
+      <nav class="side-nav" id="nav">
+        <button type="button" class="nav-item active" data-view="home"><span class="nav-icon">◫</span>工作首页</button>
+        <button type="button" class="nav-item" data-view="tasks"><span class="nav-icon">▦</span>任务看板</button>
+        <button type="button" class="nav-item" data-view="calendar"><span class="nav-icon">▤</span>日历排期</button>
+        <button type="button" class="nav-item" data-view="time"><span class="nav-icon">◷</span>工时统计</button>
+        <button type="button" class="nav-item" data-view="report"><span class="nav-icon">▣</span>每周总结</button>
+        <button type="button" class="nav-item" data-view="evidence"><span class="nav-icon">✦</span>绩效证据</button>
+        <button type="button" class="nav-item" data-view="data"><span class="nav-icon">⇄</span>备份恢复</button>
+      </nav>
+      <div class="side-bottom"><span class="status-dot"></span>数据保存在此浏览器<small>建议定期下载 JSON 备份</small></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div><span class="eyebrow">个人工作管理系统 · V1.0</span><div class="topbar-title" id="topTitle">工作首页</div></div>
+        <div class="top-actions"><span id="todayLabel" class="today-label"></span><button type="button" id="newTaskGlobal" class="btn primary"><span class="plus">＋</span> 新建任务</button></div>
+      </header>
+      <main id="view" class="main-content" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <dialog id="taskDialog" class="modal">
+    <form id="taskForm" class="modal-form">
+      <div class="modal-head"><div><span class="eyebrow">TASK DETAILS</span><h2 id="taskModalTitle">新建任务</h2></div><button type="button" class="icon-button" data-close="taskDialog" aria-label="关闭">×</button></div>
+      <input type="hidden" name="id">
+      <div class="form-grid">
+        <label class="field full">任务名称 <input name="title" required maxlength="120" placeholder="例如：制作招生短视频主视觉"></label>
+        <label class="field">所属项目 <select name="projectId" id="taskProject"></select></label>
+        <label class="field">工作类型 <select name="type" id="taskType"></select></label>
+        <label class="field">优先级 <select name="priority"><option>普通</option><option>重要</option><option>紧急</option></select></label>
+        <label class="field">任务状态 <select name="status"><option>待开始</option><option>进行中</option><option>已完成</option></select></label>
+        <label class="field">开始日期 <input type="date" name="startDate"></label>
+        <label class="field">截止日期 <input type="date" name="dueDate"></label>
+        <label class="field">任务安排人 <input name="assignedBy" maxlength="80" placeholder="选填"></label>
+        <label class="field">实际交付时间 <input type="datetime-local" name="deliveredAt"></label>
+        <label class="field full">成果链接 <input type="url" name="deliverableUrl" placeholder="https://…"></label>
+        <label class="field full">备注 <textarea name="notes" rows="3" placeholder="任务要求、素材位置或执行说明"></textarea></label>
+        <label class="field full">修改记录 <textarea name="revisionLog" rows="2" placeholder="记录关键修改及原因"></textarea></label>
+        <label class="field full">审核反馈 <textarea name="reviewFeedback" rows="2" placeholder="记录审核意见与结果"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="taskDialog">取消</button><button type="submit" class="btn primary">保存任务</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="projectDialog" class="modal narrow">
+    <form id="projectForm" class="modal-form">
+      <div class="modal-head"><div><span class="eyebrow">PROJECT</span><h2>新增项目</h2></div><button type="button" class="icon-button" data-close="projectDialog" aria-label="关闭">×</button></div>
+      <label class="field">项目名称 <input name="name" required maxlength="80" placeholder="输入项目名称"></label>
+      <label class="field">标识颜色 <input type="color" name="color" value="#d87550"></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="projectDialog">取消</button><button type="submit" class="btn primary">保存项目</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="timeDialog" class="modal narrow">
+    <form id="timeForm" class="modal-form">
+      <div class="modal-head"><div><span class="eyebrow">TIME ENTRY</span><h2>手动补录工时</h2></div><button type="button" class="icon-button" data-close="timeDialog" aria-label="关闭">×</button></div>
+      <label class="field">关联任务 <select name="taskId" id="timeTask" required></select></label>
+      <div class="form-grid"><label class="field">日期 <input type="date" name="date" required></label><label class="field">时长（分钟） <input type="number" name="minutes" min="1" max="1440" required placeholder="例如 90"></label></div>
+      <label class="field">工时类型 <select name="kind"><option>常规</option><option>临时插单</option><option>返工</option></select></label>
+      <label class="field">说明 <input name="description" maxlength="160" placeholder="可选，记录补录原因"></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="timeDialog">取消</button><button type="submit" class="btn primary">保存工时</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="evidenceDialog" class="modal narrow">
+    <form id="evidenceForm" class="modal-form">
+      <div class="modal-head"><div><span class="eyebrow">PERFORMANCE ARCHIVE</span><h2 id="evidenceModalTitle">新增绩效证据</h2></div><button type="button" class="icon-button" data-close="evidenceDialog" aria-label="关闭">×</button></div>
+      <input type="hidden" name="id">
+      <label class="field">关联任务 <select name="taskId" id="evidenceTask"><option value="">不关联任务</option></select></label>
+      <label class="field">所属项目 <select name="projectId" id="evidenceProject"></select></label>
+      <label class="field">完成日期 <input type="date" name="date" required></label>
+      <label class="field">证据标题 <input name="title" required maxlength="100" placeholder="例如：招生视频最终版交付"></label>
+      <label class="field">输出成果 <textarea name="output" rows="3" required placeholder="说明交付了什么，以及产生的价值"></textarea></label>
+      <label class="field">图片 / 成果链接 <input type="url" name="link" placeholder="https://…"></label>
+      <label class="field">备注 <textarea name="notes" rows="2" placeholder="数据、反馈、修改情况等"></textarea></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close="evidenceDialog">取消</button><button type="submit" class="btn primary">保存证据</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="printArea" class="print-area"></div>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
